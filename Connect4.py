@@ -2,7 +2,7 @@ import numpy as np
 import pygame
 import sys
 import math
-Wsdada = 2
+Testing = 2
 BLUE = (0,0,255)
 BLACK = (0,0,0)
 RED = (255,0,0)
