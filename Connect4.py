@@ -1,153 +1,362 @@
-import numpy as np
-import pygame
-import sys
-import math
-Testing = 2
-BLUE = (0,0,255)
-BLACK = (0,0,0)
-RED = (255,0,0)
-YELLOW = (255,255,0)
- 
-ROW_COUNT = 6
-COLUMN_COUNT = 7
- 
-def create_board():
-    board = np.zeros((ROW_COUNT,COLUMN_COUNT))
-    return board
- 
-def drop_piece(board, row, col, piece):
-    board[row][col] = piece
- 
-def is_valid_location(board, col):
-    return board[ROW_COUNT-1][col] == 0
- 
-def get_next_open_row(board, col):
-    for r in range(ROW_COUNT):
-        if board[r][col] == 0:
-            return r
- 
-def print_board(board):
-    print(np.flip(board, 0))
- 
-def winning_move(board, piece):
-    # Check horizontal locations for win
-    for c in range(COLUMN_COUNT-3):
-        for r in range(ROW_COUNT):
-            if board[r][c] == piece and board[r][c+1] == piece and board[r][c+2] == piece and board[r][c+3] == piece:
-                return True
- 
-    # Check vertical locations for win
-    for c in range(COLUMN_COUNT):
-        for r in range(ROW_COUNT-3):
-            if board[r][c] == piece and board[r+1][c] == piece and board[r+2][c] == piece and board[r+3][c] == piece:
-                return True
- 
-    # Check positively sloped diaganols
-    for c in range(COLUMN_COUNT-3):
-        for r in range(ROW_COUNT-3):
-            if board[r][c] == piece and board[r+1][c+1] == piece and board[r+2][c+2] == piece and board[r+3][c+3] == piece:
-                return True
- 
-    # Check negatively sloped diaganols
-    for c in range(COLUMN_COUNT-3):
-        for r in range(3, ROW_COUNT):
-            if board[r][c] == piece and board[r-1][c+1] == piece and board[r-2][c+2] == piece and board[r-3][c+3] == piece:
-                return True
- 
-def draw_board(board):
-    for c in range(COLUMN_COUNT):
-        for r in range(ROW_COUNT):
-            pygame.draw.rect(screen, BLUE, (c*SQUARESIZE, r*SQUARESIZE+SQUARESIZE, SQUARESIZE, SQUARESIZE))
-            pygame.draw.circle(screen, BLACK, (int(c*SQUARESIZE+SQUARESIZE/2), int(r*SQUARESIZE+SQUARESIZE+SQUARESIZE/2)), RADIUS)
-     
-    for c in range(COLUMN_COUNT):
-        for r in range(ROW_COUNT):      
-            if board[r][c] == 1:
-                pygame.draw.circle(screen, RED, (int(c*SQUARESIZE+SQUARESIZE/2), height-int(r*SQUARESIZE+SQUARESIZE/2)), RADIUS)
-            elif board[r][c] == 2: 
-                pygame.draw.circle(screen, YELLOW, (int(c*SQUARESIZE+SQUARESIZE/2), height-int(r*SQUARESIZE+SQUARESIZE/2)), RADIUS)
-    pygame.display.update()
- 
- 
-board = create_board()
-print_board(board)
-game_over = False
-turn = 0
- 
-#initalize pygame
-pygame.init()
- 
-#define our screen size
-SQUARESIZE = 100
- 
-#define width and height of board
-width = COLUMN_COUNT * SQUARESIZE
-height = (ROW_COUNT+1) * SQUARESIZE
- 
-size = (width, height)
- 
-RADIUS = int(SQUARESIZE/2 - 5)
- 
-screen = pygame.display.set_mode(size)
-#Calling function draw_board again
-draw_board(board)
-pygame.display.update()
- 
-myfont = pygame.font.SysFont("monospace", 75)
- 
-while not game_over:
- 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            sys.exit()
- 
-        if event.type == pygame.MOUSEMOTION:
-            pygame.draw.rect(screen, BLACK, (0,0, width, SQUARESIZE))
-            posx = event.pos[0]
-            if turn == 0:
-                pygame.draw.circle(screen, RED, (posx, int(SQUARESIZE/2)), RADIUS)
-            else: 
-                pygame.draw.circle(screen, YELLOW, (posx, int(SQUARESIZE/2)), RADIUS)
-        pygame.display.update()
- 
-        if event.type == pygame.MOUSEBUTTONDOWN:
-            pygame.draw.rect(screen, BLACK, (0,0, width, SQUARESIZE))
-            #print(event.pos)
-            # Ask for Player 1 Input
-            if turn == 0:
-                posx = event.pos[0]
-                col = int(math.floor(posx/SQUARESIZE))
- 
-                if is_valid_location(board, col):
-                    row = get_next_open_row(board, col)
-                    drop_piece(board, row, col, 1)
- 
-                    if winning_move(board, 1):
-                        label = myfont.render("Player 1 wins!!", 1, RED)
-                        screen.blit(label, (40,10))
-                        game_over = True
- 
- 
-            # # Ask for Player 2 Input
-            else:               
-                posx = event.pos[0]
-                col = int(math.floor(posx/SQUARESIZE))
- 
-                if is_valid_location(board, col):
-                    row = get_next_open_row(board, col)
-                    drop_piece(board, row, col, 2)
- 
-                    if winning_move(board, 2):
-                        label = myfont.render("Player 2 wins!!", 1, YELLOW)
-                        screen.blit(label, (40,10))
-                        game_over = True
- 
-            print_board(board)
-            draw_board(board)
- 
-            turn += 1
-            turn = turn % 2
- 
-            if game_over:
-                pygame.time.wait(3000)
+""" Final code implements Monte Carlo Tree Search for board game Othello."""
 
+import copy
+import sys
+import numpy as np
+
+NUM_COLS = 7
+NUM_ROWS = 6
+# With these constant values for players, flipping ownership is just a sign change
+WHITE = 1
+NOBODY = 0
+BLACK = -1
+
+TIE = 2  # An arbitrary enum for end-of-game
+
+WHITE_TO_PLAY = True
+
+# We'll sometimes iterate over this to look in all 8 directions from a particular square.
+# The values are the "delta" differences in row, col from the original square.
+# (Hence no (0,0), which would be the same square.)
+DIRECTIONS = [(-1, -1), (-1, 0), (-1, 1), (0, -1), (0, 1), (1, -1), (1, 0), (1, 1)]
+
+
+def read_boardstring(boardstring):
+    """Converts string representation of board to 2D numpy int array"""
+    board = np.zeros((NUM_ROWS, NUM_COLS))
+    board_chars = {
+        'W': WHITE,
+        'B': BLACK,
+        '-': NOBODY
+    }
+    
+    for line in boardstring.splitlines():
+        for row in range(NUM_ROWS):
+            for col in range(NUM_COLS):
+
+                board[row][col] = board_chars.get(line[col], NOBODY) # quietly ignore bad chars
+    
+    return board
+
+def find_winner(board,last_move_row,last_move_col):
+    """Return identity of winner, assuming game is over.
+
+    Args:
+        board (numpy 2D int array):  The othello board, with WHITE/BLACK/NOBODY in spaces
+
+    Returns:
+        int constant:  WHITE, BLACK, or TIE.
+    """
+    # Slick counting of values:  np.count_nonzero counts vals > 0, so pass in
+    #we gotta count in all 4 directions
+    whatcolor = board[last_move_row][last_move_col]         #getting the color of the lastmoveplayed to try and find a winner
+    win = 0
+  
+    num = 1 #number of chips in a row
+    #check left anf right first
+    if last_move_col < len(board[0])-1:
+        for i in range(last_move_col+1,len(board[0])):
+            if ( board[last_move_row][i] == whatcolor):
+                num = num + 1
+            else: break
+    if last_move_col > 0:
+        for i in range(last_move_col-1,-1,-1):
+            if ( board[last_move_row][i] == whatcolor):
+                num = num + 1
+            else: break
+    if num >= 4:
+        if whatcolor == WHITE:
+            return WHITE
+        else: return BLACK
+
+    num = 1 #number of chips in a row
+    #check up and down
+    if last_move_row < len(board)-1:
+        for i in range(last_move_row+1,len(board)):
+            if ( board[i][last_move_col] == whatcolor):
+                num = num + 1
+            else: break
+    if last_move_row > 0:
+        for i in range(last_move_row-1,-1,-1):
+            if ( board[i][last_move_col] == whatcolor):
+                num = num + 1
+            else: break
+    if num >= 4:
+        if whatcolor == WHITE:
+            return WHITE
+        else: return BLACK
+
+    return TIE
+
+def generate_legal_moves(board, white_turn):
+    """Returns a list of (row, col) tuples representing places to move.
+
+    Args:
+        board (numpy 2D int array):  The board
+        white_turn (bool):  True if it's white's turn to play
+    """
+
+    legal_moves = []
+    for col in range(NUM_COLS):
+        for row in range(NUM_ROWS-1,-1,-1):
+            if board[row][col] != NOBODY:
+                continue   # Occupied, so not legal for a move
+            # Legal moves must capture something
+            legal_moves.append((row, col))
+            break
+    return legal_moves
+
+
+
+def play_move(board, move, white_turn):
+    """Handles the logic of putting down a new piece and flipping captured pieces.
+
+    The board that is returned is a copy, so this is appropriate to use for search.
+
+    Args:
+        board (numpy 2D int array):  The board
+        move ((int,int)):  A (row, col) pair for the move
+        white_turn:  True iff it's white's turn
+    Returns:
+        board (numpy 2D int array)
+    """
+    new_board = copy.deepcopy(board)
+    new_board[move[0]][move[1]] = WHITE if white_turn else BLACK
+    return new_board
+
+
+def check_game_over(board):
+    """Returns the current winner of the board - WHITE, BLACK, TIE, NOBODY"""
+
+    # It's not over if either player still has legal moves
+    white_legal_moves = generate_legal_moves(board, True)
+    if white_legal_moves:  # Python idiom for checking for empty list
+        return NOBODY
+    black_legal_moves = generate_legal_moves(board, False)
+    if black_legal_moves:
+        return NOBODY
+    # I guess the game's over
+    return find_winner(board)
+
+
+def print_board(board):
+    """ Print board (and return None), for interactive mode"""
+    print(board_to_string(board))
+    
+def board_to_string(board):
+    printable = {
+        -1: "B",
+        0: "-",
+        1: "W"
+    }
+    out = ""
+    for row in range(NUM_ROWS):
+        line = ""
+        for col in range(NUM_COLS):
+            line += printable[board[row][col]]
+        out += line + "\n"
+    return out
+
+MCTS_ITERATIONS = 1
+
+def play():
+    """Interactive play, for demo purposes.  Assume AI is white and goes first."""
+    
+    board = starting_board()
+    while check_game_over(board) == NOBODY:
+        # White turn (AI)
+        lastmove = (-1,-1)
+        legal_moves = generate_legal_moves(board, True)
+        if legal_moves:  # (list is non-empty)
+            print("Thinking...")
+            best_move = MCTS_choice(board, True, MCTS_ITERATIONS)
+            board = play_move(board, best_move, True)
+            print_board(board)
+            print("")
+            lastmove = best_move
+            if find_winner(board,best_move[0],best_move[1]) != TIE:
+                break
+        else:
+            print("White has no legal moves; skipping turn...")
+
+        legal_moves = generate_legal_moves(board, False)
+        if legal_moves:
+            player_move = get_player_move(board, legal_moves)
+            board = play_move(board, player_move, False)
+            print_board(board)
+            lastmove = player_move
+            if find_winner(board,player_move[0],player_move[1]) != TIE:
+                print("we have a winner")
+                break
+        else:
+            print("Black has no legal moves; skipping turn...")
+    winner = find_winner(board,lastmove[0],lastmove[1])
+    if winner == WHITE:
+        print("White won!")
+    elif winner == BLACK:
+        print("Black won!")
+    else:
+        print("Tie!")
+
+def starting_board():
+    """Returns a board with the traditional starting positions in Othello."""
+    board = np.zeros((NUM_ROWS, NUM_COLS))
+
+    return board
+
+def get_player_move(board, legal_moves):
+    """Print board with numbers for the legal move spaces, then get player choice of move
+
+    Args:
+        board (numpy 2D int array):  The Othello board.
+        legal_moves (list of (int,int)):  List of legal (row,col) moves for human player
+    Returns:
+        (int, int) representation of the human player's choice
+    """
+    for row in range(NUM_ROWS):
+        line = ""
+        for col in range(NUM_COLS):
+            if board[row][col] == WHITE:
+                line += "W"
+            elif board[row][col] == BLACK:
+                line += "B"
+            else:
+                if (row, col) in legal_moves:
+                    line += str(legal_moves.index((row, col)))
+                else:
+                    line += "-"
+        print(line)
+    while True:
+        # Bounce around this loop until a valid integer is received
+        choice = input("Which move do you want to play? [0-" + str(len(legal_moves)-1) + "]")
+        try:
+            move_num = int(choice)
+            if 0 <= move_num < len(legal_moves):
+                return legal_moves[move_num]
+            print("That wasn't one of the options.")
+        except ValueError:
+            print("Please enter an integer as your move choice.")
+
+
+class MCTSNode:
+  def __init__(self, parent, move, board, white_turn):
+    self.parent = parent
+    self.children = []
+    self.white_turn = white_turn
+    self.move = move
+    self.board = board
+    self.playouts = 0
+    self.wins = 0
+  
+  def __str__(self): # Can modify this for debugging purposes
+    s = board_to_string(self.board)
+    if self.move is not None:
+      s += str(self.move[0]) + "," + str(self.move[1])
+    s += "\n" + str(self.wins) + "/" + str(self.playouts) + "\n"
+    return s
+  
+import math
+
+def UCB1(node):
+  #TODO  
+    return node.wins/node.playouts + math.sqrt(2) * (math.sqrt((math.log(node.parent.playouts)) /(node.playouts) ) )
+    
+def UCT(nodelist):
+    bestnodeval = UCB1(nodelist[0])
+    bestnode = nodelist[0]
+    for n in nodelist:
+        if UCB1(n)>bestnodeval:
+            bestnodeval = UCB1(n)
+            bestnode = n
+        
+    return bestnode
+
+def selection(root):
+  # TODO
+  
+    traverse = root 
+    foundchild = False
+    while foundchild != True:
+        count1 = len(generate_legal_moves(traverse.board,traverse.white_turn))
+        if count1 == 0:  #pass turn if the legal moves is  0
+           if len(generate_legal_moves(traverse.board,not traverse.white_turn)) == 0:
+            return traverse,[]
+        count2 = len(traverse.children)
+        
+        if(count1 == count2):   #if all children good then choose the children with the highest UBC1  
+            traverse = UCT(traverse.children)
+        else:   #if not all children good, then return 
+            foundchild = True
+            return traverse,generate_legal_moves(traverse.board,traverse.white_turn)   
+        
+def expansion(parent, possible_children):
+  # TODO
+    
+    if len(possible_children)==0:  #if there are no possible moves to add
+        return parent
+    newmovefound = False
+    
+    listc = []
+    for p in parent.children:
+        listc.append(p.move)
+    
+    for nextmove in possible_children:
+        if nextmove not in parent.children:
+            newnode = MCTSNode(parent,nextmove,play_move(parent.board,nextmove,not parent.white_turn),not parent.white_turn)
+            parent.children.append(newnode)
+            return newnode
+                #count = count + 1
+                #nextchildren = possible_children[count]
+                #break
+                #play_move(board, move, white_turn)
+
+import random
+
+def simulation(node):
+  # TODO
+    
+    turn = node.white_turn
+    
+    trav = node.board
+    while len(generate_legal_moves(trav,turn))>0 or len(generate_legal_moves(trav,not turn))>0:
+        if(len(generate_legal_moves(trav,turn)) == 0): #let the other player go because there are no legal moves
+            turn = not turn
+        else:
+            rando = random.randint(0,len(generate_legal_moves(trav,turn))-1)
+
+            trav = play_move(trav,generate_legal_moves(trav,turn)[rando],turn )
+            turn = not turn  #give the other player a turn
+    
+    if find_winner(trav,0,0) == 1:
+        return True
+    else:
+        return False
+    
+def backpropagation(node, white_win):
+    while node is not None:
+        node.playouts = node.playouts +1   
+        if white_win == 1:
+            if node.white_turn == False:
+                node.wins = node.wins +1
+        node = node.parent
+
+def MCTS_choice(board, white_turn, iterations):
+  start_node = MCTSNode(None,None,board,white_turn)
+  for i in range(iterations):
+    current_node, possible_children = selection(start_node)
+    new_node = expansion(current_node, possible_children)
+    white_win = simulation(new_node)
+    backpropagation(new_node, white_win)
+  # We look for the start node that has the most playouts -
+  # not win % because this way favors nodes that have been tried quite a bit
+  # (and are also good, or they wouldn't have been tried)
+  max_playouts = 0
+  best_child = None
+  for child in start_node.children:
+    if child.playouts > max_playouts:
+      max_playouts = child.playouts
+      best_child = child
+  print("done")
+  return best_child.move    
+
+play()
