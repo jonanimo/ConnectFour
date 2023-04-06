@@ -86,6 +86,54 @@ def find_winner(board,last_move_row,last_move_col):
             return WHITE
         else: return BLACK
 
+    num = 1 #number of chips in a row
+    #checking in this direction "/"
+    if last_move_row < len(board)-1 and last_move_col < len(board[0])-1:
+        for i in range(last_move_row+1,len(board)):
+            last_move_col = last_move_col + 1
+            if(last_move_col >= len(board[0])): #edge case in case we reached the column boundary 
+                break
+            if ( board[i][last_move_col] == whatcolor):
+                num = num + 1
+            else: break
+    if last_move_row > 0 and last_move_col > 0 :
+        for i in range(last_move_row-1,-1,-1):
+            last_move_col = last_move_col -1
+            if last_move_col <= -1:             #same edge case for reaching boundary, row will not reach it because it is what we sue for range
+                break
+            if ( board[i][last_move_col] == whatcolor):
+                num = num + 1
+            else: break
+    if num >= 4:
+        if whatcolor == WHITE:
+            return WHITE
+        else: return BLACK
+
+    num = 1 #number for chips 
+    #checking this direction "\"
+    if last_move_row < len(board)-1 and last_move_col >0:   #first we check the up and left direction
+        for i in range(last_move_row+1,len(board)):
+            last_move_col = last_move_col - 1 
+            if last_move_col <= -1: 
+                break
+            if ( board[i][last_move_col] == whatcolor):
+                num = num + 1
+            else: break
+    
+    if last_move_row > 0 and last_move_col < len(board[0])-1:
+        for i in range(last_move_row-1,-1,-1):
+            last_move_col = last_move_col + 1
+            if last_move_col >= len(board[0]):             #same edge case for reaching boundary, row will not reach it because it is what we sue for range
+                break
+            if ( board[i][last_move_col] == whatcolor):
+                num = num + 1
+            else: break
+
+    if num >= 4:
+        if whatcolor == WHITE:
+            return WHITE
+        else: return BLACK        
+
     return TIE
 
 def generate_legal_moves(board, white_turn):
@@ -169,12 +217,14 @@ def play():
         legal_moves = generate_legal_moves(board, True)
         if legal_moves:  # (list is non-empty)
             print("Thinking...")
-            best_move = MCTS_choice(board, True, MCTS_ITERATIONS)
+            #best_move = MCTS_choice(board, True, MCTS_ITERATIONS) take out the bot for now
+            best_move = get_player_move(board, legal_moves) #using another player for now
             board = play_move(board, best_move, True)
             print_board(board)
             print("")
             lastmove = best_move
             if find_winner(board,best_move[0],best_move[1]) != TIE:
+                print("we have a winner")
                 break
         else:
             print("White has no legal moves; skipping turn...")
