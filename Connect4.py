@@ -205,7 +205,7 @@ def board_to_string(board):
         out += line + "\n"
     return out
 
-MCTS_ITERATIONS = 1
+MCTS_ITERATIONS = 10000
 
 def play():
     """Interactive play, for demo purposes.  Assume AI is white and goes first."""
@@ -217,11 +217,12 @@ def play():
         legal_moves = generate_legal_moves(board, True)
         if legal_moves:  # (list is non-empty)
             print("Thinking...")
-            #best_move = MCTS_choice(board, True, MCTS_ITERATIONS) take out the bot for now
-            best_move = get_player_move(board, legal_moves) #using another player for now
+            best_move = MCTS_choice(board, True, MCTS_ITERATIONS) #this is turned on if we want the bot to take a turn0
+
+            #best_move = get_player_move(board, legal_moves) #using another player for now
             board = play_move(board, best_move, True)
-            print_board(board)
-            print("")
+            #print_board(board)
+            #print("")
             lastmove = best_move
             if find_winner(board,best_move[0],best_move[1]) != TIE:
                 print("we have a winner")
@@ -329,7 +330,7 @@ def selection(root):
     while foundchild != True:
         count1 = len(generate_legal_moves(traverse.board,traverse.white_turn))
         if count1 == 0:  #pass turn if the legal moves is  0
-           if len(generate_legal_moves(traverse.board,not traverse.white_turn)) == 0:
+            #print("this is stupid")
             return traverse,[]
         count2 = len(traverse.children)
         
@@ -337,11 +338,12 @@ def selection(root):
             traverse = UCT(traverse.children)
         else:   #if not all children good, then return 
             foundchild = True
+            #print(generate_legal_moves(traverse.board,traverse.white_turn))
             return traverse,generate_legal_moves(traverse.board,traverse.white_turn)   
         
 def expansion(parent, possible_children):
   # TODO
-    
+    #print(possible_children)
     if len(possible_children)==0:  #if there are no possible moves to add
         return parent
     newmovefound = False
@@ -349,35 +351,63 @@ def expansion(parent, possible_children):
     listc = []
     for p in parent.children:
         listc.append(p.move)
-    
+    #print(possible_children)0
+    random.shuffle(possible_children)
     for nextmove in possible_children:
+        #print(nextmove)
+        counter = 0
+        #print(nextmove)
+        #print("ssssssssssssssssssssssssssssssssssssssssssssssss")
+        #print(parent.children)
         if nextmove not in parent.children:
-            newnode = MCTSNode(parent,nextmove,play_move(parent.board,nextmove,not parent.white_turn),not parent.white_turn)
+            #print(counter)
+            #print(nextmove)
+            newnode = MCTSNode(parent,nextmove,play_move(parent.board,nextmove,parent.white_turn),parent.white_turn)
+            #print(newnode.move)
             parent.children.append(newnode)
             return newnode
                 #count = count + 1
                 #nextchildren = possible_children[count]
                 #break
                 #play_move(board, move, white_turn)
-
+        counter = counter + 1
+    #print("-------------------------------------------")
 import random
 
 def simulation(node):
   # TODO
-    
-    turn = node.white_turn
+    into = 0
+    turn = not node.white_turn
     
     trav = node.board
     while len(generate_legal_moves(trav,turn))>0 or len(generate_legal_moves(trav,not turn))>0:
         if(len(generate_legal_moves(trav,turn)) == 0): #let the other player go because there are no legal moves
-            turn = not turn
+            return False                #changed this to return False because if there are no legal moves game ends unlike Othello
         else:
             rando = random.randint(0,len(generate_legal_moves(trav,turn))-1)
-
-            trav = play_move(trav,generate_legal_moves(trav,turn)[rando],turn )
+            movetoplay = generate_legal_moves(trav,turn)[rando]
+            
+            #print(movetoplay)
+            #print(turn)
+            trav = play_move(trav,movetoplay,turn )
+            #if into > -1:
+                #print(movetoplay)
+                #z3print_board(trav)
+                #print("yahallo")
             turn = not turn  #give the other player a turn
+
+        into = 1
+
+        if find_winner(trav,movetoplay[0],movetoplay[1]) == WHITE:
+            #print("done")
+            #print_board(trav)
+            #print("dasdasdssad")
+            return True
+        elif find_winner(trav,movetoplay[0],movetoplay[1]) == BLACK:
+            return False
     
-    if find_winner(trav,0,0) == 1:
+    if find_winner(trav,movetoplay[0],movetoplay[1]) == WHITE:
+        #print_board(trav)
         return True
     else:
         return False
@@ -391,10 +421,16 @@ def backpropagation(node, white_win):
         node = node.parent
 
 def MCTS_choice(board, white_turn, iterations):
+  #print_board(board)
   start_node = MCTSNode(None,None,board,white_turn)
   for i in range(iterations):
+
     current_node, possible_children = selection(start_node)
+    #print("dasdasdas")
+    #print(possible_children)
     new_node = expansion(current_node, possible_children)
+    #print_board(current_node.board)
+    #print("pffft")
     white_win = simulation(new_node)
     backpropagation(new_node, white_win)
   # We look for the start node that has the most playouts -
@@ -403,6 +439,7 @@ def MCTS_choice(board, white_turn, iterations):
   max_playouts = 0
   best_child = None
   for child in start_node.children:
+    #print(child.move)
     if child.playouts > max_playouts:
       max_playouts = child.playouts
       best_child = child
