@@ -209,119 +209,89 @@ def board_to_string(board):
 MCTS_ITERATIONS = 1000
 
 def play():
-    gameboard = starting_board()
-    board= """-------
--------
--------
--------
--------
-WWW----"""
-    my_root = MCTSNode(None, None, read_boardstring(board), True)
-    my_root.playouts = 6
-    my_root.wins = 2
-    children_moves = generate_legal_moves(read_boardstring(board),True)
-    children = []
-    for move in children_moves:
-      new_board = play_move(my_root.board,move,True)
-      node = MCTSNode(my_root,move,new_board,False)
-      node.playouts = 2
-      node.wins = 1
-      children.append(node)
-    children[3].wins = 2 # The best move happens to be the first move listed
-    my_root.children = children
-    # Now test UCB1 on each, and UCT to select the best
-    for child in my_root.children:
-      print(UCB1(child))  # Expect about 2.34 for first, 1.84 for other two
-    print(UCT(my_root.children)) # Expect the node with 2/2 wins
-    children_moves = generate_legal_moves(read_boardstring(board),True)
-    print(children_moves)
-#     """Interactive play, for demo purposes.  Assume AI is white and goes first."""
-    node, children = selection(my_root)
-    print(node) # Expect the node with 2/2 wins
-    print(children) # Expect [(2, 3), (3, 2), (4, 5), (5, 4)]
+    """Interactive play, for demo purposes.  Assume AI is white and goes first."""
     
- 
-    
+    board = starting_board()
    
-#     while check_game_over(board) == NOBODY:
-#         # White turn (AI)
-#         lastmove = (-1,-1)
-#         legal_moves = generate_legal_moves(board, True)
-#         if legal_moves:  # (list is non-empty)
-#             print("Thinking...")
-#             best_move = MCTS_choice(board, True, MCTS_ITERATIONS)
-#              #this is turned on if we want the bot to take a turn0
+    while check_game_over(board) == NOBODY:
+        # White turn (AI)
+        lastmove = (-1,-1)
+        legal_moves = generate_legal_moves(board, True)
+        if legal_moves:  # (list is non-empty)
+            print("Thinking...")
+            best_move = MCTS_choice(board, True, MCTS_ITERATIONS)
+             #this is turned on if we want the bot to take a turn0
             
-#             #best_move = get_player_move(board, legal_moves) #using another player for now
-#             board = play_move(board, best_move, True)
-#             #print_board(board)
-#             #print("")
-#             lastmove = best_move
-#             if find_winner(board,best_move[0],best_move[1]) != TIE:
-#                 print("we have a winner")
-#                 print_board(board)
-#                 break
-#         else:
-#             print("White has no legal moves; skipping turn...")
+            #best_move = get_player_move(board, legal_moves) #using another player for now
+            board = play_move(board, best_move, True)
+            #print_board(board)
+            #print("")
+            lastmove = best_move
+            if find_winner(board,best_move[0],best_move[1]) != TIE:
+                print("we have a winner")
+                print_board(board)
+                break
+        else:
+            print("White has no legal moves; skipping turn...")
 
-#         legal_moves = generate_legal_moves(board, False)
-#         if legal_moves:
-#             player_move = get_player_move(board, legal_moves)
-#             board = play_move(board, player_move, False)
-#             print_board(board)
-#             lastmove = player_move
-#             if find_winner(board,player_move[0],player_move[1]) != TIE:
-#                 print("we have a winner")
-#                 print_board(board)
-#                 break
-#         else:
-#             print("Black has no legal moves; skipping turn...")
-#     winner = find_winner(board,lastmove[0],lastmove[1])
-#     if winner == WHITE:
-#         print("White won!")
-#     elif winner == BLACK:
-#         print("Black won!")
-#     else:
-#         print("Tie!")
+        legal_moves = generate_legal_moves(board, False)
+        if legal_moves:
+            player_move = get_player_move(board, legal_moves)
+            board = play_move(board, player_move, False)
+            print_board(board)
+            lastmove = player_move
+            if find_winner(board,player_move[0],player_move[1]) != TIE:
+                print("we have a winner")
+                print_board(board)
+                break
+        else:
+            print("Black has no legal moves; skipping turn...")
+    winner = find_winner(board,lastmove[0],lastmove[1])
+    if winner == WHITE:
+        print("White won!")
+    elif winner == BLACK:
+        print("Black won!")
+    else:
+        print("Tie!")
 
 def starting_board():
-     """Returns a board with the traditional starting positions in Othello."""
-     board = np.zeros((NUM_ROWS, NUM_COLS))
+    """Returns a board with the traditional starting positions in Othello."""
+    board = np.zeros((NUM_ROWS, NUM_COLS))
 
-     return board
+    return board
 
-# def get_player_move(board, legal_moves):
-#     """Print board with numbers for the legal move spaces, then get player choice of move
+def get_player_move(board, legal_moves):
+    """Print board with numbers for the legal move spaces, then get player choice of move
 
-#     Args:
-#         board (numpy 2D int array):  The Othello board.
-#         legal_moves (list of (int,int)):  List of legal (row,col) moves for human player
-#     Returns:
-#         (int, int) representation of the human player's choice
-#     """
-#     for row in range(NUM_ROWS):
-#         line = ""
-#         for col in range(NUM_COLS):
-#             if board[row][col] == WHITE:
-#                 line += "W"
-#             elif board[row][col] == BLACK:
-#                 line += "B"
-#             else:
-#                 if (row, col) in legal_moves:
-#                     line += str(legal_moves.index((row, col)))
-#                 else:
-#                     line += "-"
-#         print(line)
-#     while True:
-#         # Bounce around this loop until a valid integer is received
-#         choice = input("Which move do you want to play? [0-" + str(len(legal_moves)-1) + "]")
-#         try:
-#             move_num = int(choice)
-#             if 0 <= move_num < len(legal_moves):
-#                 return legal_moves[move_num]
-#             print("That wasn't one of the options.")
-#         except ValueError:
-#             print("Please enter an integer as your move choice.")
+    Args:
+        board (numpy 2D int array):  The Othello board.
+        legal_moves (list of (int,int)):  List of legal (row,col) moves for human player
+    Returns:
+        (int, int) representation of the human player's choice
+    """
+    for row in range(NUM_ROWS):
+        line = ""
+        for col in range(NUM_COLS):
+            if board[row][col] == WHITE:
+                line += "W"
+            elif board[row][col] == BLACK:
+                line += "B"
+            else:
+                if (row, col) in legal_moves:
+                    line += str(legal_moves.index((row, col)))
+                else:
+                    line += "-"
+        print(line)
+    while True:
+        # Bounce around this loop until a valid integer is received
+        choice = input("Which move do you want to play? [0-" + str(len(legal_moves)-1) + "]")
+        try:
+            move_num = int(choice)
+            if 0 <= move_num < len(legal_moves):
+                return legal_moves[move_num]
+            print("That wasn't one of the options.")
+        except ValueError:
+            print("Please enter an integer as your move choice.")
 
 
 class MCTSNode:
@@ -391,6 +361,8 @@ import random
 def simulation(node):
   # TODO
     
+   
+
     trav = node.board
 
     #print("---------------------------------------------------------")
