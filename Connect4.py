@@ -2,6 +2,7 @@
 "Credit to Professor Kevin Gold for allowing me to use his framework for my Project"
 "Credit to https://www.geeksforgeeks.org/ml-monte-carlo-tree-search-mcts/ for providing pseudocode for MCTS"
 import copy
+from distutils.log import error
 import sys
 import numpy as np
 
@@ -39,103 +40,61 @@ def read_boardstring(boardstring):
 
     return board
 
-def find_winner(board,last_move_row,last_move_col):
-    """Return identity of winner, assuming game is over.
-
-    Args:
-        board (numpy 2D int array):  The othello board, with WHITE/BLACK/NOBODY in spaces
-
-    Returns:
-        int constant:  WHITE, BLACK, or TIE.
-    """
-    # Slick counting of values:  np.count_nonzero counts vals > 0, so pass in
-    #we gotta count in all 4 directions
-    whatcolor = board[last_move_row][last_move_col]         #getting the color of the lastmoveplayed to try and find a winner
-    win = 0
-  
-    num = 1 #number of chips in a row
-    #check left anf right first
-    if last_move_col < len(board[0])-1:
-        for i in range(last_move_col+1,len(board[0])):
-            if ( board[last_move_row][i] == whatcolor):
-                num = num + 1
-            else: break
-    if last_move_col > 0:
-        for i in range(last_move_col-1,-1,-1):
-            if ( board[last_move_row][i] == whatcolor):
-                num = num + 1
-            else: break
-    if num >= 4:
-        if whatcolor == WHITE:
-            return WHITE
-        else: return BLACK
-
-    num = 1 #number of chips in a row
-    #check up and down
-    if last_move_row < len(board)-1:
-        for i in range(last_move_row+1,len(board)):
-            if ( board[i][last_move_col] == whatcolor):
-                num = num + 1
-            else: break
-    if last_move_row > 0:
-        for i in range(last_move_row-1,-1,-1):
-            if ( board[i][last_move_col] == whatcolor):
-                num = num + 1
-            else: break
-    if num >= 4:
-        if whatcolor == WHITE:
-            return WHITE
-        else: return BLACK
-
-    num = 1 #number of chips in a row
-    #checking in this direction "/"
-    if last_move_row < len(board)-1 and last_move_col < len(board[0])-1:
-        for i in range(last_move_row+1,len(board)):
-            last_move_col = last_move_col + 1
-            if(last_move_col >= len(board[0])): #edge case in case we reached the column boundary 
-                break
-            if ( board[i][last_move_col] == whatcolor):
-                num = num + 1
-            else: break
-    if last_move_row > 0 and last_move_col > 0 :
-        for i in range(last_move_row-1,-1,-1):
-            last_move_col = last_move_col -1
-            if last_move_col <= -1:             #same edge case for reaching boundary, row will not reach it because it is what we sue for range
-                break
-            if ( board[i][last_move_col] == whatcolor):
-                num = num + 1
-            else: break
-    if num >= 4:
-        if whatcolor == WHITE:
-            return WHITE
-        else: return BLACK
-
-    num = 1 #number for chips 
-    #checking this direction "\"
-    if last_move_row < len(board)-1 and last_move_col >0:   #first we check the up and left direction
-        for i in range(last_move_row+1,len(board)):
-            last_move_col = last_move_col - 1 
-            if last_move_col <= -1: 
-                break
-            if ( board[i][last_move_col] == whatcolor):
-                num = num + 1
-            else: break
+def find_winner(board):
+    # Check rows for a winner
     
-    if last_move_row > 0 and last_move_col < len(board[0])-1:
-        for i in range(last_move_row-1,-1,-1):
-            last_move_col = last_move_col + 1
-            if last_move_col >= len(board[0]):             #same edge case for reaching boundary, row will not reach it because it is what we sue for range
-                break
-            if ( board[i][last_move_col] == whatcolor):
-                num = num + 1
-            else: break
+    for i in range(6):
+        for j in range(4):
+            #print(board[i][j])
+            if board[i][j] == board[i][j+1] == board[i][j+2] == board[i][j+3] and (board[i][j] == WHITE or board[i][j] == BLACK) :
+                if board[i][j] == WHITE:
+                    return WHITE
+                elif board[i][j] == BLACK:
+                    return BLACK
+                else: 
+                    print(board[i][j])
+                    raise ValueError("Something is wrong....")
+                    
 
-    if num >= 4:
-        if whatcolor == WHITE:
-            return WHITE
-        else: return BLACK        
+    # Check columns for a winner
+    for i in range(3):
+        for j in range(7):
+            if board[i][j] == board[i+1][j] == board[i+2][j] == board[i+3][j] and (board[i][j] == "W" or board[i][j] == "B"):
+                if board[i][j] == WHITE:
+                    return WHITE
+                elif board[i][j] == BLACK:
+                    return BLACK
+                else: 
+                    print(board[i][j])
+                    raise ValueError("Something is wrong....")
 
+    # Check diagonals for a winner (top-left to bottom-right)
+    for i in range(3):
+        for j in range(4):
+            if board[i][j] == board[i+1][j+1] == board[i+2][j+2] == board[i+3][j+3] and (board[i][j] == "W" or board[i][j] == "B"):
+                if board[i][j] == WHITE:
+                    return WHITE
+                elif board[i][j] == BLACK:
+                    return BLACK
+                else: 
+                    print(board[i][j])
+                    raise ValueError("Something is wrong....")
+
+    # Check diagonals for a winner (top-right to bottom-left)
+    for i in range(3):
+        for j in range(3, 7):
+            if board[i][j] == board[i+1][j-1] == board[i+2][j-2] == board[i+3][j-3] and (board[i][j] == "W" or board[i][j] == "B"):
+                if board[i][j] == WHITE:
+                    return WHITE
+                elif board[i][j] == BLACK:
+                    return BLACK
+                else: 
+                    print(board[i][j])
+                    raise ValueError("Something is wrong....")
+
+    # No winner found
     return TIE
+
 
 def generate_legal_moves(board, white_turn):
     """Returns a list of (row, col) tuples representing places to move.
@@ -206,14 +165,15 @@ def board_to_string(board):
         out += line + "\n"
     return out
 
-MCTS_ITERATIONS = 1000
+MCTS_ITERATIONS =1000
+
 
 def play():
     """Interactive play, for demo purposes.  Assume AI is white and goes first."""
     
     board = starting_board()
    
-    while check_game_over(board) == NOBODY:
+    while find_winner(board) == TIE:
         # White turn (AI)
         lastmove = (-1,-1)
         legal_moves = generate_legal_moves(board, True)
@@ -227,7 +187,7 @@ def play():
             #print_board(board)
             #print("")
             lastmove = best_move
-            if find_winner(board,best_move[0],best_move[1]) != TIE:
+            if find_winner(board) != TIE:
                 print("we have a winner")
                 print_board(board)
                 break
@@ -240,13 +200,13 @@ def play():
             board = play_move(board, player_move, False)
             print_board(board)
             lastmove = player_move
-            if find_winner(board,player_move[0],player_move[1]) != TIE:
+            if find_winner(board) != TIE:
                 print("we have a winner")
                 print_board(board)
                 break
         else:
             print("Black has no legal moves; skipping turn...")
-    winner = find_winner(board,lastmove[0],lastmove[1])
+    winner = find_winner(board)
     if winner == WHITE:
         print("White won!")
     elif winner == BLACK:
@@ -347,12 +307,13 @@ def selection(root):
             return traverse,generate_legal_moves(traverse.board,traverse.white_turn)   
         
 def expansion(parent, possible_children):
-  random.shuffle(possible_children) 
+  #random.shuffle(possible_children) 
   for move in possible_children:
     board = play_move(parent.board, move, parent.white_turn)
     child = MCTSNode(parent, move, board, not parent.white_turn)
     if not any(movedChild.move == move for movedChild in parent.children):
         parent.children.append(child)
+
         return child
   return parent
 
@@ -365,44 +326,60 @@ def simulation(node):
 
     trav = node.board
 
-    #print("---------------------------------------------------------")
-    while len(generate_legal_moves(trav,node.white_turn))>0 or len(generate_legal_moves(trav,not node.white_turn))>0:
-        if(len(generate_legal_moves(trav,node.white_turn)) == 0): #let the other player go because there are no legal moves
+    # print("------------------------SIMULATION---------------------------------")
+    # print(node.white_turn)
+    # print_board(node.board)
+
+    turn = node.white_turn
+    if find_winner(trav) == WHITE:
+        return True
+    while len(generate_legal_moves(trav,turn))>0 or len(generate_legal_moves(trav,not turn))>0:
+        if(len(generate_legal_moves(trav,turn)) == 0): #let the other player go because there are no legal moves
             return False                #changed this to return False because if there are no legal moves game ends unlike Othello
         else:
-            rando = random.randint(0,len(generate_legal_moves(trav,node.white_turn))-1)
-            movetoplay = generate_legal_moves(trav,node.white_turn)[rando]
+            rando = random.randint(0,len(generate_legal_moves(trav,turn))-1)
+            movetoplay = generate_legal_moves(trav,turn)[rando]
             
 
-            trav = play_move(trav,movetoplay,node.white_turn )
+            trav = play_move(trav,movetoplay,turn )
 
-            node.white_turn = not node.white_turn  #give the other player a turn
+            turn = not turn  #give the other player a turn
             #print(node.white_turn)
      
 
-        if find_winner(trav,movetoplay[0],movetoplay[1]) == WHITE:
-            #print("done")
-            #print_board(trav)
+        if find_winner(trav) == WHITE:
+            # print("done")
+            # print("WHITE WIN")
+            # print(turn)
+            # print_board(trav)
             
             return True
-        elif find_winner(trav,movetoplay[0],movetoplay[1]) == BLACK:
-            #print_board(trav)
+        elif find_winner(trav) == BLACK:
+            # print("done")
+            # print(turn)
+            # print_board(trav)
             return False
     
-    if find_winner(trav,movetoplay[0],movetoplay[1]) == WHITE:
-        #print_board(trav)
-        return True
+    if find_winner(trav) == WHITE:
+            # print("done")
+            # print("WHITE WIN")
+            # print(turn)
+            # print_board(trav)
+            return True
     else:
-        #print_board(trav)
-        return False
+            # print("done")
+            # print(turn)
+            # print_board(trav)
+            return False
     
 def backpropagation(node, white_win):
-    while node is not None:
-        node.playouts = node.playouts +1   
+    while node is not None: 
+        node.playouts = node.playouts + 1  
         if white_win == 1:
-            if node.white_turn == False:
                 node.wins = node.wins +1
         node = node.parent
+    
+
 
 def MCTS_choice(board, white_turn, iterations):
 
@@ -419,39 +396,18 @@ def MCTS_choice(board, white_turn, iterations):
   # not win % because this way favors nodes that have been tried quite a bit
   # (and are also good, or they wouldn't have been tried)
 
-
-  max_playouts = 0
+  max_playouts = -1000000
   best_child = None
   for child in start_node.children:
-    #2print(child.move)0
 
-    if child.playouts > max_playouts:
-      max_playouts = child.playouts
+    # print(child.move)
+    # print(child.playouts)
+    # print(child.wins)
+    if child.wins/child.playouts > max_playouts:
+      max_playouts = child.wins/child.playouts
       best_child = child
-  print("done")
+#   print("done")
+#   print(best_child.move)
   return best_child.move  
 
 play()
-#Test 1 should return false because its basically all black
-# filled_board = """-------
-# -------
-# -------
-# -------
-# -------
-# W-WW---"""
-#my_root2 = MCTSNode(None, None, read_boardstring(filled_board), True)
-#print(read_boardstring(filled_board))
-#my_root2.playouts = 2
-#my_root2.wins = 2
-#children_moves = generate_legal_moves(read_boardstring(filled_board),True)
-#children = []
-#for move in children_moves: # Should be only one
-  #new_board = play_move(my_root2.board,move,True)
- # node = MCTSNode(my_root2,move,new_board,False)
- # node.playouts = 2
- # node.wins = 0
-#  children.append(node)
-#my_root2.children = children
-
-#winner = simulation(my_root2)
-#print(winner)
