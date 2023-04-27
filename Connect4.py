@@ -176,8 +176,10 @@ def play():
     """Interactive play, for demo purposes.  Assume AI is white and goes first."""
     
     board = starting_board()
-    white_turn = False   #switch for whoever goes first
-
+    random_bits = random.getrandbits(1)
+    random_bool = bool(random_bits)
+    white_turn = random.random() > 0.5   #switch for whoever goes first
+    print(white_turn)
     while find_winner(board) == TIE:
         # White turn (MCTS AI_  
 
@@ -189,7 +191,7 @@ def play():
                 #best_move = get_player_move(board, legal_moves) #using another player for now
                 board = play_move(board, best_move, True)
                 white_turn = not white_turn
-                #print_board(board)
+                print_board(board)
                 #print("")
                 if find_winner(board) != TIE:
                     print("we have a winner")
@@ -416,6 +418,7 @@ def backpropagation(node, white_win):
 
 def MCTS_choice(board, white_turn, iterations):
 
+  
   start_node = MCTSNode(None,None,board,white_turn)
   for i in range(iterations):
 
