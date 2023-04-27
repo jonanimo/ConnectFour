@@ -1,6 +1,9 @@
 """ Final code implements Monte Carlo Tree Search for board game Connect 4."""
-"Credit to Professor Kevin Gold for allowing me to use his framework for my Project"
+"Credit to Jonathan A for Connect 4 and MCTS implementation"
+"Credit to Nolan T for MinMax Implementation"
+"Credit to Professor Kevin Gold for allowing me to use his MCTS framework for my Project"
 "Credit to https://www.geeksforgeeks.org/ml-monte-carlo-tree-search-mcts/ for providing pseudocode for MCTS"
+
 import copy
 from distutils.log import error
 import sys
@@ -42,7 +45,7 @@ def read_boardstring(boardstring):
 
 def find_winner(board):
     # Check rows for a winner
-    
+    #print("CHECKING FOR WINNER")
     for i in range(6):
         for j in range(4):
             #print(board[i][j])
@@ -59,7 +62,7 @@ def find_winner(board):
     # Check columns for a winner
     for i in range(3):
         for j in range(7):
-            if board[i][j] == board[i+1][j] == board[i+2][j] == board[i+3][j] and (board[i][j] == "W" or board[i][j] == "B"):
+            if board[i][j] == board[i+1][j] == board[i+2][j] == board[i+3][j] and (board[i][j] == WHITE or board[i][j] == BLACK):
                 if board[i][j] == WHITE:
                     return WHITE
                 elif board[i][j] == BLACK:
@@ -71,7 +74,7 @@ def find_winner(board):
     # Check diagonals for a winner (top-left to bottom-right)
     for i in range(3):
         for j in range(4):
-            if board[i][j] == board[i+1][j+1] == board[i+2][j+2] == board[i+3][j+3] and (board[i][j] == "W" or board[i][j] == "B"):
+            if board[i][j] == board[i+1][j+1] == board[i+2][j+2] == board[i+3][j+3] and (board[i][j] == WHITE or board[i][j] == BLACK):
                 if board[i][j] == WHITE:
                     return WHITE
                 elif board[i][j] == BLACK:
@@ -83,7 +86,7 @@ def find_winner(board):
     # Check diagonals for a winner (top-right to bottom-left)
     for i in range(3):
         for j in range(3, 7):
-            if board[i][j] == board[i+1][j-1] == board[i+2][j-2] == board[i+3][j-3] and (board[i][j] == "W" or board[i][j] == "B"):
+            if board[i][j] == board[i+1][j-1] == board[i+2][j-2] == board[i+3][j-3] and (board[i][j] == WHITE or board[i][j] == BLACK):
                 if board[i][j] == WHITE:
                     return WHITE
                 elif board[i][j] == BLACK:
@@ -129,6 +132,7 @@ def play_move(board, move, white_turn):
         board (numpy 2D int array)
     """
     new_board = copy.deepcopy(board)
+    #print(move)
     new_board[move[0]][move[1]] = WHITE if white_turn else BLACK
     return new_board
 
@@ -172,40 +176,67 @@ def play():
     """Interactive play, for demo purposes.  Assume AI is white and goes first."""
     
     board = starting_board()
-   
+    white_turn = False   #switch for whoever goes first
+
     while find_winner(board) == TIE:
-        # White turn (AI)
-        lastmove = (-1,-1)
+        # White turn (MCTS AI_  
+
         legal_moves = generate_legal_moves(board, True)
         if legal_moves:  # (list is non-empty)
-            print("Thinking...")
-            best_move = MCTS_choice(board, True, MCTS_ITERATIONS)
-             #this is turned on if we want the bot to take a turn0
-            
-            #best_move = get_player_move(board, legal_moves) #using another player for now
-            board = play_move(board, best_move, True)
-            #print_board(board)
-            #print("")
-            lastmove = best_move
-            if find_winner(board) != TIE:
-                print("we have a winner")
-                print_board(board)
-                break
+            if white_turn:
+                print("MCTS IS THINKING...")
+                best_move = MCTS_choice(board, True, MCTS_ITERATIONS)  #this is turned on if we want the bot to take a turn          
+                #best_move = get_player_move(board, legal_moves) #using another player for now
+                board = play_move(board, best_move, True)
+                white_turn = not white_turn
+                #print_board(board)
+                #print("")
+                if find_winner(board) != TIE:
+                    print("we have a winner")
+                    print_board(board)
+                    break
         else:
-            print("White has no legal moves; skipping turn...")
+            print("White has no legal moves; ending game")
+            break
 
         legal_moves = generate_legal_moves(board, False)
-        if legal_moves:
-            player_move = get_player_move(board, legal_moves)
-            board = play_move(board, player_move, False)
-            print_board(board)
-            lastmove = player_move
-            if find_winner(board) != TIE:
-                print("we have a winner")
+        if legal_moves :
+            #BLACK TURN (MINMAX AI)
+
+            if not white_turn:
+                #player_move = get_player_move(board, legal_moves)  #change to this if u want a player vs MCTS 
+                #--------------
+                print("MINIMAX TURN")
+                tempboard = copy.deepcopy(board)        
+                tempboard= np.flip(tempboard,0)
+                col, minimax_score = minimax(tempboard, 5, -math.inf, math.inf, True)
+
+                #print("minmax is done thinking")
+                #print(col)
+                
+                row = -1
+                moves = generate_legal_moves(board,False)
+                
+                for m in moves:
+                     if col == m[1]:
+                          row = m[0]
+                          break
+                tuple = (row,col)
+
+
+
+                board = play_move(board,tuple,False)   
+
+                #board = play_move(board, player_move, False)   #for player moves
                 print_board(board)
-                break
+                white_turn = not white_turn
+                if find_winner(board) != TIE:
+                    print("we have a winner")
+                    print_board(board)
+                    break
         else:
-            print("Black has no legal moves; skipping turn...")
+            print("Black has no legal moves; ending game")
+            break
     winner = find_winner(board)
     if winner == WHITE:
         print("White won!")
@@ -333,6 +364,8 @@ def simulation(node):
     turn = node.white_turn
     if find_winner(trav) == WHITE:
         return True
+    if find_winner(trav) == BLACK: 
+        return False
     while len(generate_legal_moves(trav,turn))>0 or len(generate_legal_moves(trav,not turn))>0:
         if(len(generate_legal_moves(trav,turn)) == 0): #let the other player go because there are no legal moves
             return False                #changed this to return False because if there are no legal moves game ends unlike Othello
@@ -409,5 +442,156 @@ def MCTS_choice(board, white_turn, iterations):
 #   print("done")
 #   print(best_child.move)
   return best_child.move  
+
+#--------------------------------------END OF Jonathans part of code-------------------------------------------------------------------------------------------------------
+
+
+def drop_piece(board, row, col, piece):
+	board[row][col] = piece
+
+def is_valid_location(board, col):
+	return board[NUM_ROWS-1][col] == 0
+
+def get_next_open_row(board, col):
+	for r in range(NUM_ROWS):
+		if board[r][col] == 0:
+			return r
+
+#def print_board(board):
+#	print(np.flip(board, 0))
+
+def winning_move(board, piece):
+	# Check horizontal locations for win
+	for c in range(NUM_COLS-3):
+		for r in range(NUM_ROWS):
+			if board[r][c] == piece and board[r][c+1] == piece and board[r][c+2] == piece and board[r][c+3] == piece:
+				return True
+
+	# Check vertical locations for win
+	for c in range(NUM_COLS):
+		for r in range(NUM_ROWS-3):
+			if board[r][c] == piece and board[r+1][c] == piece and board[r+2][c] == piece and board[r+3][c] == piece:
+				return True
+
+	# Check positively sloped diaganols
+	for c in range(NUM_COLS-3):
+		for r in range(NUM_ROWS-3):
+			if board[r][c] == piece and board[r+1][c+1] == piece and board[r+2][c+2] == piece and board[r+3][c+3] == piece:
+				return True
+
+	# Check negatively sloped diaganols
+	for c in range(NUM_COLS-3):
+		for r in range(3, NUM_ROWS):
+			if board[r][c] == piece and board[r-1][c+1] == piece and board[r-2][c+2] == piece and board[r-3][c+3] == piece:
+				return True
+
+def evaluate_window(window, piece):
+	score = 0
+	opp_piece = WHITE
+
+
+	if window.count(piece) == 4:
+		score += 100
+	elif window.count(piece) == 3 and window.count(NOBODY) == 1:
+		score += 5
+	elif window.count(piece) == 2 and window.count(NOBODY) == 2:
+		score += 2
+
+	if window.count(opp_piece) == 3 and window.count(NOBODY) == 1:
+		score -= 4
+
+	return score
+
+def score_position(board, piece):
+	score = 0
+
+	## Score center column
+	center_array = [int(i) for i in list(board[:, NUM_COLS//2])]
+	center_count = center_array.count(piece)
+	score += center_count * 3
+
+	## Score Horizontal
+	for r in range(NUM_ROWS):
+		row_array = [int(i) for i in list(board[r,:])]
+		for c in range(NUM_COLS-3):
+			window = row_array[c:c+4]
+			score += evaluate_window(window, piece)
+
+	## Score Vertical
+	for c in range(NUM_COLS):
+		col_array = [int(i) for i in list(board[:,c])]
+		for r in range(NUM_ROWS-3):
+			window = col_array[r:r+4]
+			score += evaluate_window(window, piece)
+
+	## Score posiive sloped diagonal
+	for r in range(NUM_ROWS-3):
+		for c in range(NUM_COLS-3):
+			window = [board[r+i][c+i] for i in range(4)]
+			score += evaluate_window(window, piece)
+
+	for r in range(NUM_ROWS-3):
+		for c in range(NUM_COLS-3):
+			window = [board[r+3-i][c+i] for i in range(4)]
+			score += evaluate_window(window, piece)
+
+	return score
+
+def is_terminal_node(board):
+	return winning_move(board, WHITE) or winning_move(board, BLACK) or len(get_valid_locations(board)) == 0
+
+def minimax(board, depth, alpha, beta, maximizingPlayer):
+
+    valid_locations = get_valid_locations(board)
+    is_terminal = is_terminal_node(board)
+    if depth == 0 or is_terminal:
+        if is_terminal:
+            if winning_move(board, BLACK):
+                return (None, 100000000000000)
+            elif winning_move(board, WHITE):
+                return (None, -10000000000000)
+            else: # Game is over, no more valid moves
+                return (None, 0)
+        else: # Depth is zero
+            return (None, score_position(board, BLACK))
+    if maximizingPlayer:
+        value = -math.inf
+        column = random.choice(valid_locations)
+        for col in valid_locations:
+            row = get_next_open_row(board, col)
+            b_copy = board.copy()
+            drop_piece(b_copy, row, col, BLACK)
+            new_score = minimax(b_copy, depth-1, alpha, beta, False)[1]
+            if new_score > value:
+                value = new_score
+                column = col
+            alpha = max(alpha, value)
+            if alpha >= beta:
+                break
+        return column, value
+
+    else: # Minimizing player
+        value = math.inf
+        column = random.choice(valid_locations)
+        for col in valid_locations:
+            row = get_next_open_row(board, col)
+            b_copy = board.copy()
+            drop_piece(b_copy, row, col, WHITE)
+            new_score = minimax(b_copy, depth-1, alpha, beta, True)[1]
+            if new_score < value:
+                value = new_score
+                column = col
+            beta = min(beta, value)
+            if alpha >= beta:
+                break
+        return column, value
+
+def get_valid_locations(board):
+	valid_locations = []
+	for col in range(NUM_COLS):
+		if is_valid_location(board, col):
+			valid_locations.append(col)
+	return valid_locations
+
 
 play()
