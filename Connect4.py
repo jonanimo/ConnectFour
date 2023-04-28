@@ -8,7 +8,7 @@ import copy
 from distutils.log import error
 import sys
 import numpy as np
-
+MCTS_ITERATIONS =1000
 NUM_COLS = 7
 NUM_ROWS = 6
 # With these constant values for players, flipping ownership is just a sign change
@@ -98,6 +98,23 @@ def find_winner(board):
     # No winner found
     return TIE
 
+def needs_one_move_to_win(board, player):
+    """
+    Want to find if the current player can win within one move
+    """
+
+    moves = generate_legal_moves(board,True)
+
+    for move in moves:
+       turn = True
+       if player == BLACK:
+            turn = False
+       board_copy = play_move(board,move,turn) 
+       #print_board(board_copy)
+       if find_winner(board_copy) == player: 
+            return True,move
+    
+    return False,None
 
 def generate_legal_moves(board, white_turn):
     """Returns a list of (row, col) tuples representing places to move.
@@ -169,15 +186,20 @@ def board_to_string(board):
         out += line + "\n"
     return out
 
-MCTS_ITERATIONS =1000
+
 
 
 def play():
     """Interactive play, for demo purposes.  Assume AI is white and goes first."""
-    
+    print("1 for vs MCTS")
+    print("2 for vs MinMax")
+    print("3 for BOT VS BOT")
+
+    choice = int(input())
+    if choice != 1 and choice != 2 and choice != 3:
+         print("please type a number between 1 2 3. Shutting Down")
+         return
     board = starting_board()
-    random_bits = random.getrandbits(1)
-    random_bool = bool(random_bits)
     white_turn = random.random() > 0.5   #switch for whoever goes first
     print(white_turn)
     while find_winner(board) == TIE:
@@ -185,7 +207,7 @@ def play():
 
         legal_moves = generate_legal_moves(board, True)
         if legal_moves:  # (list is non-empty)
-            if white_turn:
+            if white_turn and (choice == 1 or choice == 3):
                 print("MCTS IS THINKING...")
                 best_move = MCTS_choice(board, True, MCTS_ITERATIONS)  #this is turned on if we want the bot to take a turn          
                 #best_move = get_player_move(board, legal_moves) #using another player for now
@@ -197,6 +219,17 @@ def play():
                     print("we have a winner")
                     print_board(board)
                     break
+            elif white_turn and choice == 2:
+                 print("Your turn buddy")                          
+                 best_move = get_player_move(board, legal_moves) #using another player for now
+                 board = play_move(board, best_move, True)
+                 white_turn = not white_turn
+                 print_board(board)
+                 #print("")
+                 if find_winner(board) != TIE:
+                    print("we have a winner")
+                    print_board(board)
+                    break
         else:
             print("White has no legal moves; ending game")
             break
@@ -205,7 +238,7 @@ def play():
         if legal_moves :
             #BLACK TURN (MINMAX AI)
 
-            if not white_turn:
+            if not white_turn and (choice == 2 or choice == 3):
                 #player_move = get_player_move(board, legal_moves)  #change to this if u want a player vs MCTS 
                 #--------------
                 print("MINIMAX TURN")
@@ -236,6 +269,17 @@ def play():
                     print("we have a winner")
                     print_board(board)
                     break
+            elif not white_turn and choice == 1:
+                player_move = get_player_move(board, legal_moves)  #change to this if u want a player vs MCTS 
+                #--------------
+                print("Your Turn")
+                board = play_move(board,player_move,False)   
+                print_board(board)
+                white_turn = not white_turn
+                if find_winner(board) != TIE:
+                    print("we have a winner")
+                    print_board(board)
+                    break                    
         else:
             print("Black has no legal moves; ending game")
             break
@@ -340,7 +384,7 @@ def selection(root):
             return traverse,generate_legal_moves(traverse.board,traverse.white_turn)   
         
 def expansion(parent, possible_children):
-  #random.shuffle(possible_children) 
+  random.shuffle(possible_children) 
   for move in possible_children:
     board = play_move(parent.board, move, parent.white_turn)
     child = MCTSNode(parent, move, board, not parent.white_turn)
@@ -355,8 +399,6 @@ import random
 def simulation(node):
   # TODO
     
-   
-
     trav = node.board
 
     # print("------------------------SIMULATION---------------------------------")
@@ -369,15 +411,19 @@ def simulation(node):
     if find_winner(trav) == BLACK: 
         return False
     while len(generate_legal_moves(trav,turn))>0 or len(generate_legal_moves(trav,not turn))>0:
-        if(len(generate_legal_moves(trav,turn)) == 0): #let the other player go because there are no legal moves
-            return False                #changed this to return False because if there are no legal moves game ends unlike Othello
+        if(len(generate_legal_moves(trav,turn)) == 0): 
+            return False                #if there are no legal moves then game is over
         else:
-            rando = random.randint(0,len(generate_legal_moves(trav,turn))-1)
-            movetoplay = generate_legal_moves(trav,turn)[rando]
+            #print(trav)
+            #if turn == True and needs_one_move_to_win(trav, WHITE) == True: 
+            #          return True
+            if turn == False and needs_one_move_to_win(trav, BLACK)[0] == True:
+                      return False
+            else:
+                rando = random.randint(0,len(generate_legal_moves(trav,turn))-1)
+                movetoplay = generate_legal_moves(trav,turn)[rando]
+                trav = play_move(trav,movetoplay,turn )
             
-
-            trav = play_move(trav,movetoplay,turn )
-
             turn = not turn  #give the other player a turn
             #print(node.white_turn)
      
@@ -417,8 +463,11 @@ def backpropagation(node, white_win):
 
 
 def MCTS_choice(board, white_turn, iterations):
-
-  
+  pre = needs_one_move_to_win(board, BLACK)
+  #print(pre[0])
+  #print(pre[1])
+  if pre[0] == True:
+     return pre[1]  
   start_node = MCTSNode(None,None,board,white_turn)
   for i in range(iterations):
 
@@ -439,11 +488,12 @@ def MCTS_choice(board, white_turn, iterations):
     # print(child.move)
     # print(child.playouts)
     # print(child.wins)
-    if child.wins/child.playouts > max_playouts:
-      max_playouts = child.wins/child.playouts
+    if child.playouts > max_playouts:
+      max_playouts = child.playouts
       best_child = child
 #   print("done")
 #   print(best_child.move)
+  
   return best_child.move  
 
 #--------------------------------------END OF Jonathans part of code-------------------------------------------------------------------------------------------------------
@@ -459,10 +509,7 @@ def get_next_open_row(board, col):
 	for r in range(NUM_ROWS):
 		if board[r][col] == 0:
 			return r
-
-#def print_board(board):
-#	print(np.flip(board, 0))
-
+                
 def winning_move(board, piece):
 	# Check horizontal locations for win
 	for c in range(NUM_COLS-3):
@@ -598,3 +645,12 @@ def get_valid_locations(board):
 
 
 play()
+# board = np.zeros((NUM_ROWS, NUM_COLS))
+
+# board[2][3] = BLACK
+# board[3][4] = BLACK
+# board[4][5] = 0
+# board[5][5] = BLACK
+# board[5][6] = BLACK
+# print(board)
+# print(needs_one_move_to_win(board,BLACK))
