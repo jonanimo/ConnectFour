@@ -3,6 +3,7 @@
 "Credit to Nolan T for MinMax Implementation"
 "Credit to Professor Kevin Gold for allowing me to use his MCTS framework for my Project"
 "Credit to https://www.geeksforgeeks.org/ml-monte-carlo-tree-search-mcts/ for providing pseudocode for MCTS"
+"Credit to https://www.geeksforgeeks.org/minimax-algorithm-in-game-theory-set-4-alpha-beta-pruning/ for pseudocode for Alpha Beta pruning MinMax "
 
 import copy
 from distutils.log import error
