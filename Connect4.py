@@ -9,7 +9,7 @@ import copy
 from distutils.log import error
 import sys
 import numpy as np
-MCTS_ITERATIONS =1000
+MCTS_ITERATIONS =10000
 NUM_COLS = 7
 NUM_ROWS = 6
 # With these constant values for players, flipping ownership is just a sign change
@@ -201,6 +201,7 @@ def play():
          print("please type a number between 1 2 3. Shutting Down")
          return
     board = starting_board()
+
     white_turn = random.random() > 0.5   #switch for whoever goes first
     print(white_turn)
     while find_winner(board) == TIE:
@@ -334,13 +335,15 @@ def get_player_move(board, legal_moves):
 
 class MCTSNode:
   def __init__(self, parent, move, board, white_turn):
-    self.parent = parent
-    self.children = []
-    self.white_turn = white_turn
     self.move = move
-    self.board = board
+    self.parent = parent
     self.playouts = 0
     self.wins = 0
+    self.children = []
+    self.white_turn = white_turn
+    self.board = board
+    
+    
   
   def __str__(self): # Can modify this for debugging purposes
     s = board_to_string(self.board)
@@ -353,6 +356,7 @@ import math
 
 def UCB1(node):
   #TODO  
+
     return node.wins/node.playouts + math.sqrt(2) * (math.sqrt((math.log(node.parent.playouts)) /(node.playouts) ) )
     
 def UCT(nodelist):
@@ -385,7 +389,7 @@ def selection(root):
             return traverse,generate_legal_moves(traverse.board,traverse.white_turn)   
         
 def expansion(parent, possible_children):
-  random.shuffle(possible_children) 
+  
   for move in possible_children:
     board = play_move(parent.board, move, parent.white_turn)
     child = MCTSNode(parent, move, board, not parent.white_turn)
@@ -416,8 +420,7 @@ def simulation(node):
             return False                #if there are no legal moves then game is over
         else:
             #print(trav)
-            #if turn == True and needs_one_move_to_win(trav, WHITE) == True: 
-            #          return True
+
             if turn == False and needs_one_move_to_win(trav, BLACK)[0] == True:
                       return False
             else:
@@ -436,7 +439,7 @@ def simulation(node):
             # print_board(trav)
             
             return True
-        elif find_winner(trav) == BLACK:
+        elif find_winner(trav) == BLACK or find_winner(trav) == TIE:
             # print("done")
             # print(turn)
             # print_board(trav)
@@ -459,6 +462,7 @@ def backpropagation(node, white_win):
         node.playouts = node.playouts + 1  
         if white_win == 1:
                 node.wins = node.wins +1
+
         node = node.parent
     
 
@@ -469,6 +473,9 @@ def MCTS_choice(board, white_turn, iterations):
   #print(pre[1])
   if pre[0] == True:
      return pre[1]  
+  pre2 = needs_one_move_to_win(board, WHITE)
+  if pre[0] == True:
+       return pre[1]
   start_node = MCTSNode(None,None,board,white_turn)
   for i in range(iterations):
 
