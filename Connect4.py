@@ -389,7 +389,7 @@ def selection(root):
             return traverse,generate_legal_moves(traverse.board,traverse.white_turn)   
         
 def expansion(parent, possible_children):
-  
+  random.shuffle(possible_children)
   for move in possible_children:
     board = play_move(parent.board, move, parent.white_turn)
     child = MCTSNode(parent, move, board, not parent.white_turn)
