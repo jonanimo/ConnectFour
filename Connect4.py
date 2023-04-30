@@ -391,7 +391,7 @@ def selection(root):
 def expansion(parent, possible_children):
   random.shuffle(possible_children)
   for move in possible_children:
-    board = play_move(parent.board, move, parent.white_turn)
+    board = play_move(parent.board, move, not parent.white_turn)
     child = MCTSNode(parent, move, board, not parent.white_turn)
     if not any(movedChild.move == move for movedChild in parent.children):
         parent.children.append(child)
